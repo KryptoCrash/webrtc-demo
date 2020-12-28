@@ -51,15 +51,10 @@ async function answer() {
 async function findICE() {
     // Listen for local ICE candidates on the local RTCPeerConnection
     peerConnection.addEventListener('icecandidate', event => {
-        console.log("FOUND ICE")
         if (event.candidate) {
             socket.emit('ice', btoa(JSON.stringify(event.candidate)));
         }
     });
-
-    peerConnection.addEventListener('icegatheringstatechange', e => {
-        console.log(e.target.iceGatheringState)
-    })
 
     // Listen for remote ICE candidates and add them to the local RTCPeerConnection
     socket.on('ice', async candidate => {
@@ -100,12 +95,6 @@ async function main() {
     await sendMedia(stream);
     await recieveMedia();
     await findICE();
-
-    peerConnection.addEventListener('connectionstatechange', async e => {
-        if (peerConnection.connectionState == 'connected') {
-            console.log("yay")
-        }
-    })
 }
 
 main();
