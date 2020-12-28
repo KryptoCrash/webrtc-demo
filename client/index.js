@@ -1,5 +1,5 @@
 const socket = io.connect();
-const configuration = { 'iceServers': [{ 'urls': 'stun:stun.services.mozilla.com:3478' }] }
+const configuration = { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] }
 const peerConnection = new RTCPeerConnection(configuration);
 
 // Get tracks for streaming
@@ -50,12 +50,16 @@ async function answer() {
 
 async function findICE() {
     // Listen for local ICE candidates on the local RTCPeerConnection
-    peerConnection.addEventListener('icecandidate', candidate => {
+    peerConnection.addEventListener('icecandidate', event => {
         console.log("FOUND ICE")
-        if (candidate) {
-            socket.emit('ice', btoa(JSON.stringify(candidate)));
+        if (event.candidate) {
+            socket.emit('ice', btoa(JSON.stringify(event.candidate)));
         }
     });
+
+    peerConnection.addEventListener('icegatheringstatechange', e => {
+        console.log(e.target.iceGatheringState)
+    })
 
     // Listen for remote ICE candidates and add them to the local RTCPeerConnection
     socket.on('ice', async candidate => {
@@ -80,8 +84,8 @@ async function recieveMedia() {
     remoteVideo = document.querySelector('video#remoteVideo');
     remoteVideo.srcObject = remoteStream;
 
-    peerConnection.addEventListener('track', track => {
-        remoteStream.addTrack(track);
+    peerConnection.addEventListener('track', async event => {
+        remoteStream.addTrack(event.track, remoteStream);
     })
 }
 
@@ -89,18 +93,17 @@ async function main() {
     const stream = await displayMedia();
 
     document.addEventListener("keypress", async () => {
-        await makeCall(socket, peerConnection);
+        await makeCall();
     })
 
     await answer();
+    await sendMedia(stream);
+    await recieveMedia();
     await findICE();
 
     peerConnection.addEventListener('connectionstatechange', async e => {
-        console.log(peerConnection.connectionState)
         if (peerConnection.connectionState == 'connected') {
-            console.log("HELLO")
-            await sendMedia(stream);
-            await recieveMedia();
+            console.log("yay")
         }
     })
 }
